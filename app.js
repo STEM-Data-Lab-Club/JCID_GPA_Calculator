@@ -1,21 +1,14 @@
-// ===========================
-// JCID GPA Calculator (v1.0)
-// Client-side only
-// ===========================
+// JCID GPA Calculator v1.1 (client-side only)
 
-// ---- Config (JCID rules) ----
 const CFG = {
   decimals: 2,
-
-  // DP mappings (explicit; NOT derived from credits)
+  mypMax: 4.0,
   dp: {
     defaultCredits: { "IB HL": 6, "IB SL": 4 },
     excludeTypes: new Set(["TOK", "CAS", "EE"]),
     ibHL: { 7: 4.5, 6: 4.1, 5: 3.7, 4: 3.3, 3: 2.8, 2: 2.4, 1: 0.0 },
-    ibSL: { 7: 4.3, 6: 3.9, 5: 3.5, 4: 3.1, 3: 2.6, 2: 2.1, 1: 0.0 },
+    ibSL: { 7: 4.3, 6: 3.9, 5: 3.5, 4: 3.1, 3: 2.6, 2: 2.1, 1: 0.0 }
   },
-
-  // Non-IB raw score bands (MYP + DP Non-IB; also used for excluded display)
   nonIbBands: [
     { min: 93, max: 100, gp: 4.0 },
     { min: 85, max: 92,  gp: 3.5 },
@@ -23,47 +16,35 @@ const CFG = {
     { min: 70, max: 77,  gp: 2.9 },
     { min: 60, max: 69,  gp: 2.4 },
     { min: 45, max: 59,  gp: 1.8 },
-    { min: 0,  max: 44,  gp: 0.0 },
-  ],
-
-  // MYP max GPA is 4.00 (by scale)
-  mypMax: 4.0,
+    { min: 0,  max: 44,  gp: 0.0 }
+  ]
 };
 
 const $ = (id) => document.getElementById(id);
+const mypBody = document.querySelector("#myp-table tbody");
+const dpBody = document.querySelector("#dp-table tbody");
 
-function setTab(activeBtnId) {
-  const tabs = [
-    { btn: "tab-myp", panel: "panel-myp" },
-    { btn: "tab-dp", panel: "panel-dp" },
-    { btn: "tab-policy", panel: "panel-policy" },
-  ];
-  for (const t of tabs) {
-    const active = t.btn === activeBtnId;
-    $(t.btn).setAttribute("aria-selected", active ? "true" : "false");
-    $(t.panel).hidden = !active;
-  }
+function fmt(x){
+  return Number.isFinite(x) ? x.toFixed(CFG.decimals) : "—";
 }
 
-// ---- Rounding rule: nearest integer, .5 rounds up ----
-function roundRaw(raw) {
+function roundRaw(raw){
   if (raw === "" || raw === null || raw === undefined) return null;
   const n = Number(raw);
-  if (!Number.isFinite(n)) return null;
-  if (n < 0 || n > 100) return null;
-  return Math.floor(n + 0.5); // ensures 92.5 -> 93
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return Math.floor(n + 0.5); // 92.5 -> 93
 }
 
-function rawToNonIbGP(raw) {
+function rawToGP(raw){
   const r = roundRaw(raw);
   if (r === null) return null;
-  for (const b of CFG.nonIbBands) {
+  for (const b of CFG.nonIbBands){
     if (r >= b.min && r <= b.max) return b.gp;
   }
   return null;
 }
 
-function ibToGP(type, score) {
+function ibToGP(type, score){
   const s = Number(score);
   if (!Number.isFinite(s) || s < 1 || s > 7) return null;
   if (type === "IB HL") return CFG.dp.ibHL[s] ?? null;
@@ -71,17 +52,9 @@ function ibToGP(type, score) {
   return null;
 }
 
-function fmt(x) {
-  return Number.isFinite(x) ? x.toFixed(CFG.decimals) : "—";
-}
-
-// ---- GPA calc ----
-function computeGPA(rows) {
-  let num = 0;
-  let den = 0;
-  let count = 0;
-
-  for (const r of rows) {
+function compute(rows){
+  let num = 0, den = 0, count = 0;
+  for (const r of rows){
     if (!r.included) continue;
     if (!Number.isFinite(r.gp)) continue;
     if (!Number.isFinite(r.credit) || r.credit <= 0) continue;
@@ -89,330 +62,316 @@ function computeGPA(rows) {
     den += r.credit;
     count += 1;
   }
-  return {
-    gpa: den > 0 ? (num / den) : null,
-    credits: den,
-    count
-  };
+  return { gpa: den > 0 ? (num/den) : null, credits: den, count };
 }
 
-// ===========================
-// MYP UI
-// ===========================
-const mypBody = document.querySelector("#myp-table tbody");
+/* Tabs */
+function setTab(btnId){
+  const tabs = [
+    { btn:"tab-myp", panel:"panel-myp" },
+    { btn:"tab-dp", panel:"panel-dp" },
+    { btn:"tab-policy", panel:"panel-policy" }
+  ];
+  for (const t of tabs){
+    const active = t.btn === btnId;
+    $(t.btn).setAttribute("aria-selected", active ? "true" : "false");
+    $(t.panel).hidden = !active;
+  }
+}
+$("tab-myp").addEventListener("click", ()=>setTab("tab-myp"));
+$("tab-dp").addEventListener("click", ()=>setTab("tab-dp"));
+$("tab-policy").addEventListener("click", ()=>setTab("tab-policy"));
 
-function mypRow() {
+/* MYP rows */
+function mypRow(){
   const tr = document.createElement("tr");
   tr.innerHTML = `
-    <td><input class="myp-subj" placeholder="e.g., Mathematics"/></td>
-    <td><input class="myp-raw" placeholder="0-100" inputmode="decimal"/></td>
-    <td><input class="myp-local" placeholder="1-8" inputmode="numeric"/></td>
-    <td><input class="myp-credit" placeholder="Credit" inputmode="decimal"/></td>
-    <td class="myp-gp">—</td>
-    <td class="myp-ctr">—</td>
+    <td><input class="subj" placeholder="e.g., Mathematics"/></td>
+    <td><input class="raw" placeholder="0-100" inputmode="decimal"/></td>
+    <td><input class="local" placeholder="1-8" inputmode="numeric"/></td>
+    <td><input class="credit" placeholder="Credit" inputmode="decimal"/></td>
+    <td class="gp">—</td>
+    <td class="ctr">—</td>
     <td><button class="icon-del" title="Remove">🗑</button></td>
   `;
-
-  tr.querySelector(".icon-del").addEventListener("click", () => {
-    tr.remove();
-    recalcMYP();
-  });
-
+  tr.querySelector(".icon-del").addEventListener("click", ()=>{ tr.remove(); recalcMYP(); });
   tr.addEventListener("input", recalcMYP);
   return tr;
 }
 
-function mypReadRows() {
-  const rows = [];
-  for (const tr of [...mypBody.querySelectorAll("tr")]) {
-    const raw = tr.querySelector(".myp-raw").value.trim();
-    const creditStr = tr.querySelector(".myp-credit").value.trim();
+function readMYP(){
+  const out = [];
+  for (const tr of [...mypBody.querySelectorAll("tr")]){
+    const subj = tr.querySelector(".subj").value.trim() || "Untitled";
+    const raw = tr.querySelector(".raw").value.trim();
+    const creditStr = tr.querySelector(".credit").value.trim();
 
-    const gp0 = rawToNonIbGP(raw);
+    const gp0 = rawToGP(raw);
     const gp = gp0 === null ? null : Math.min(gp0, CFG.mypMax);
 
     const credit = Number(creditStr);
     const creditNum = Number.isFinite(credit) ? credit : NaN;
 
-    const included = gp !== null && Number.isFinite(creditNum) && creditNum > 0;
+    const included = (gp !== null) && Number.isFinite(creditNum) && creditNum > 0;
 
-    // render row computed
-    tr.querySelector(".myp-gp").textContent = gp === null ? "—" : fmt(gp);
-    tr.querySelector(".myp-ctr").textContent = included ? fmt(gp * creditNum) : "—";
+    tr.querySelector(".gp").textContent = gp === null ? "—" : fmt(gp);
+    tr.querySelector(".ctr").textContent = included ? fmt(gp * creditNum) : "—";
 
-    rows.push({ gp, credit: creditNum, included });
+    out.push({ subj, gp, credit: creditNum, included });
   }
-  return rows;
+  return out;
 }
 
-function validateMYP() {
-  const errors = [];
-  const trs = [...mypBody.querySelectorAll("tr")];
-  trs.forEach((tr, i) => {
-    const raw = tr.querySelector(".myp-raw").value.trim();
-    const credit = tr.querySelector(".myp-credit").value.trim();
-
-    if (raw !== "" && roundRaw(raw) === null) {
-      errors.push(`Row ${i + 1}: Raw score must be 0–100 (decimals allowed; 0.5 rounds up).`);
-    }
-    if (credit !== "" && (!Number.isFinite(Number(credit)) || Number(credit) <= 0)) {
-      errors.push(`Row ${i + 1}: Credit must be a positive number.`);
-    }
+function renderBreakdown(elId, rows){
+  const box = $(elId);
+  const included = rows.filter(r=>r.included);
+  if (!included.length){
+    box.className = "muted small";
+    box.textContent = "Add subjects to see contributions.";
+    return;
+  }
+  box.className = "";
+  box.innerHTML = "";
+  included.forEach(r=>{
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div class="l">
+        <div><b>${escapeHtml(r.subj)}</b></div>
+        <div class="s">${fmt(r.gp)} × ${fmt(r.credit)}</div>
+      </div>
+      <div><b>${fmt(r.gp * r.credit)}</b></div>
+    `;
+    box.appendChild(row);
   });
+}
 
+function validateMYP(){
+  const errs = [];
+  const trs = [...mypBody.querySelectorAll("tr")];
+  trs.forEach((tr,i)=>{
+    const raw = tr.querySelector(".raw").value.trim();
+    const credit = tr.querySelector(".credit").value.trim();
+    if (raw !== "" && roundRaw(raw) === null) errs.push(`Row ${i+1}: Raw score must be 0–100 (0.5 rounds up).`);
+    if (credit !== "" && (!Number.isFinite(Number(credit)) || Number(credit) <= 0)) errs.push(`Row ${i+1}: Credit must be a positive number.`);
+  });
   const box = $("myp-alert");
-  if (errors.length) {
+  if (errs.length){
     box.hidden = false;
-    box.innerHTML = "<b>Fix the following:</b><br/>" + errors.map(e => "• " + e).join("<br/>");
+    box.innerHTML = "<b>Fix the following:</b><br/>" + errs.map(e=>"• "+escapeHtml(e)).join("<br/>");
   } else {
     box.hidden = true;
     box.textContent = "";
   }
 }
 
-function recalcMYP() {
-  const rows = mypReadRows();
-  const { gpa, credits, count } = computeGPA(rows);
+function recalcMYP(){
+  const rows = readMYP();
+  const { gpa, credits, count } = compute(rows);
   $("myp-gpa").textContent = gpa === null ? "—" : fmt(gpa);
   $("myp-credits").textContent = fmt(credits);
   $("myp-count").textContent = String(count);
+  renderBreakdown("myp-breakdown", rows);
   validateMYP();
 }
 
-$("myp-add").addEventListener("click", () => {
-  mypBody.appendChild(mypRow());
-  recalcMYP();
-});
-
-$("myp-reset").addEventListener("click", () => {
+$("myp-add").addEventListener("click", ()=>{ mypBody.appendChild(mypRow()); recalcMYP(); });
+$("myp-reset").addEventListener("click", ()=>{
   mypBody.innerHTML = "";
   mypBody.appendChild(mypRow());
   recalcMYP();
 });
+$("myp-print").addEventListener("click", ()=>window.print());
 
-$("myp-print").addEventListener("click", () => window.print());
+/* DP rows */
+const DP_TYPES = ["IB HL","IB SL","Non-IB","TOK","CAS","EE"];
 
-// ===========================
-// DP UI
-// ===========================
-const dpBody = document.querySelector("#dp-table tbody");
-const DP_TYPES = ["IB HL", "IB SL", "Non-IB", "TOK", "CAS", "EE"];
-
-function dpScoreControl(type, presetScore = "") {
-  // IB: dropdown 1-7, Non-IB/TOK/CAS/EE: raw input
-  if (type === "IB HL" || type === "IB SL") {
+function scoreControl(type, preset=""){
+  if (type === "IB HL" || type === "IB SL"){
     const sel = document.createElement("select");
-    sel.className = "dp-score";
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "—";
-    sel.appendChild(placeholder);
-    for (let i = 1; i <= 7; i++) {
-      const opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = String(i);
-      sel.appendChild(opt);
+    sel.className = "score";
+    const ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "—";
+    sel.appendChild(ph);
+    for (let i=1;i<=7;i++){
+      const o = document.createElement("option");
+      o.value = String(i); o.textContent = String(i);
+      sel.appendChild(o);
     }
-    sel.value = presetScore === "" ? "" : String(presetScore);
+    sel.value = preset === "" ? "" : String(preset);
     return sel;
   }
   const inp = document.createElement("input");
-  inp.className = "dp-score";
+  inp.className = "score";
   inp.placeholder = "0-100";
   inp.inputMode = "decimal";
-  inp.value = presetScore === "" ? "" : String(presetScore);
+  inp.value = preset === "" ? "" : String(preset);
   return inp;
 }
 
-function dpRow(prefill = {}) {
+function dpRow(prefill={}){
   const tr = document.createElement("tr");
   tr.innerHTML = `
-    <td><input class="dp-subj" placeholder="e.g., Math HL"/></td>
-    <td>
-      <select class="dp-type"></select>
-    </td>
-    <td class="dp-scorecell"></td>
-    <td><input class="dp-credit" placeholder="Credit" inputmode="decimal"/></td>
-    <td class="dp-gp">—</td>
-    <td class="dp-status"></td>
-    <td class="dp-ctr">—</td>
+    <td><input class="subj" placeholder="e.g., Math HL"/></td>
+    <td><select class="type"></select></td>
+    <td class="scorecell"></td>
+    <td><input class="credit" placeholder="Credit" inputmode="decimal"/></td>
+    <td class="gp">—</td>
+    <td class="status"></td>
+    <td class="ctr">—</td>
     <td><button class="icon-del" title="Remove">🗑</button></td>
   `;
 
-  const subj = tr.querySelector(".dp-subj");
-  const typeSel = tr.querySelector(".dp-type");
-  const scoreCell = tr.querySelector(".dp-scorecell");
-  const creditInp = tr.querySelector(".dp-credit");
+  const subj = tr.querySelector(".subj");
+  const type = tr.querySelector(".type");
+  const scorecell = tr.querySelector(".scorecell");
+  const credit = tr.querySelector(".credit");
 
-  DP_TYPES.forEach(t => {
-    const o = document.createElement("option");
-    o.value = t;
-    o.textContent = t;
-    typeSel.appendChild(o);
+  DP_TYPES.forEach(t=>{
+    const o=document.createElement("option");
+    o.value=t; o.textContent=t;
+    type.appendChild(o);
   });
 
   subj.value = prefill.subject ?? "";
-  typeSel.value = prefill.type ?? "IB HL";
+  type.value = prefill.type ?? "IB HL";
 
-  // score control
-  const scoreCtrl = dpScoreControl(typeSel.value, prefill.score ?? "");
-  scoreCell.appendChild(scoreCtrl);
+  scorecell.appendChild(scoreControl(type.value, prefill.score ?? ""));
 
-  // default credits for IB HL/SL
-  const def = CFG.dp.defaultCredits[typeSel.value];
-  if (prefill.credit !== undefined) {
-    creditInp.value = String(prefill.credit);
-  } else if (def !== undefined) {
-    creditInp.value = String(def);
-  } else {
-    creditInp.value = "";
+  const def = CFG.dp.defaultCredits[type.value];
+  if (prefill.credit !== undefined) credit.value = String(prefill.credit);
+  else if (def !== undefined) credit.value = String(def);
+  else credit.value = "";
+
+  function paintStatus(){
+    const excluded = CFG.dp.excludeTypes.has(type.value);
+    tr.querySelector(".status").innerHTML = excluded
+      ? `<span class="status-pill ex">Excluded</span>`
+      : `<span class="status-pill in">Included</span>`;
   }
 
-  function renderStatus(excluded) {
-    const td = tr.querySelector(".dp-status");
-    td.innerHTML = excluded
-      ? `<span class="status status-ex">Excluded</span>`
-      : `<span class="status status-in">Included</span>`;
-  }
-
-  function onTypeChange() {
-    scoreCell.innerHTML = "";
-    const newCtrl = dpScoreControl(typeSel.value, "");
-    scoreCell.appendChild(newCtrl);
-
-    const d = CFG.dp.defaultCredits[typeSel.value];
-    if (d !== undefined) creditInp.value = String(d);
-
-    renderStatus(CFG.dp.excludeTypes.has(typeSel.value));
-    recalcDP();
-  }
-
-  typeSel.addEventListener("change", onTypeChange);
-
-  tr.addEventListener("input", recalcDP);
-  tr.querySelector(".icon-del").addEventListener("click", () => {
-    tr.remove();
+  type.addEventListener("change", ()=>{
+    scorecell.innerHTML="";
+    scorecell.appendChild(scoreControl(type.value,""));
+    const d = CFG.dp.defaultCredits[type.value];
+    if (d !== undefined) credit.value = String(d);
+    paintStatus();
     recalcDP();
   });
 
-  renderStatus(CFG.dp.excludeTypes.has(typeSel.value));
+  tr.addEventListener("input", recalcDP);
+  tr.querySelector(".icon-del").addEventListener("click", ()=>{ tr.remove(); recalcDP(); });
+
+  paintStatus();
   return tr;
 }
 
-function dpReadRows() {
-  const rows = [];
-  for (const tr of [...dpBody.querySelectorAll("tr")]) {
-    const type = tr.querySelector(".dp-type").value;
-    const scoreEl = tr.querySelector(".dp-score");
-    const creditStr = tr.querySelector(".dp-credit").value.trim();
+function readDP(){
+  const out=[];
+  for (const tr of [...dpBody.querySelectorAll("tr")]){
+    const subj = tr.querySelector(".subj").value.trim() || "Untitled";
+    const type = tr.querySelector(".type").value;
+    const scoreEl = tr.querySelector(".score");
+    const creditStr = tr.querySelector(".credit").value.trim();
 
     const excluded = CFG.dp.excludeTypes.has(type);
 
-    let gp = null;
+    let gp=null;
     if (type === "IB HL" || type === "IB SL") gp = ibToGP(type, scoreEl.value);
-    else gp = rawToNonIbGP(scoreEl.value);
+    else gp = rawToGP(scoreEl.value);
 
     const credit = Number(creditStr);
     const creditNum = Number.isFinite(credit) ? credit : NaN;
 
     const included = !excluded && gp !== null && Number.isFinite(creditNum) && creditNum > 0;
 
-    tr.querySelector(".dp-gp").textContent = gp === null ? "—" : fmt(gp);
-    tr.querySelector(".dp-ctr").textContent = excluded ? "Excluded" : (included ? fmt(gp * creditNum) : "—");
+    tr.querySelector(".gp").textContent = gp === null ? "—" : fmt(gp);
+    tr.querySelector(".ctr").textContent = excluded ? "Excluded" : (included ? fmt(gp*creditNum) : "—");
 
-    rows.push({ gp, credit: creditNum, included });
+    out.push({ subj, gp, credit: creditNum, included });
   }
-  return rows;
+  return out;
 }
 
-function validateDP() {
-  const errors = [];
-  const trs = [...dpBody.querySelectorAll("tr")];
+function validateDP(){
+  const errs=[];
+  const trs=[...dpBody.querySelectorAll("tr")];
+  trs.forEach((tr,i)=>{
+    const type = tr.querySelector(".type").value;
+    const scoreEl = tr.querySelector(".score");
+    const credit = tr.querySelector(".credit").value.trim();
 
-  trs.forEach((tr, i) => {
-    const type = tr.querySelector(".dp-type").value;
-    const scoreEl = tr.querySelector(".dp-score");
-    const credit = tr.querySelector(".dp-credit").value.trim();
-
-    if (type === "IB HL" || type === "IB SL") {
-      if (scoreEl.value !== "" && (Number(scoreEl.value) < 1 || Number(scoreEl.value) > 7)) {
-        errors.push(`Row ${i + 1}: IB score must be 1–7.`);
-      }
+    if (type === "IB HL" || type === "IB SL"){
+      if (scoreEl.value !== "" && (Number(scoreEl.value) < 1 || Number(scoreEl.value) > 7))
+        errs.push(`Row ${i+1}: IB score must be 1–7.`);
     } else {
       const raw = scoreEl.value.trim();
-      if (raw !== "" && roundRaw(raw) === null) {
-        errors.push(`Row ${i + 1}: Raw score must be 0–100 (decimals allowed; 0.5 rounds up).`);
-      }
+      if (raw !== "" && roundRaw(raw) === null)
+        errs.push(`Row ${i+1}: Raw score must be 0–100 (0.5 rounds up).`);
     }
-
-    if (credit !== "" && (!Number.isFinite(Number(credit)) || Number(credit) < 0)) {
-      errors.push(`Row ${i + 1}: Credit must be a non-negative number (excluded courses can be 0).`);
-    }
+    if (credit !== "" && (!Number.isFinite(Number(credit)) || Number(credit) < 0))
+      errs.push(`Row ${i+1}: Credit must be non-negative (excluded courses can be 0).`);
   });
 
-  const box = $("dp-alert");
-  if (errors.length) {
-    box.hidden = false;
-    box.innerHTML = "<b>Fix the following:</b><br/>" + errors.map(e => "• " + e).join("<br/>");
+  const box=$("dp-alert");
+  if (errs.length){
+    box.hidden=false;
+    box.innerHTML="<b>Fix the following:</b><br/>"+errs.map(e=>"• "+escapeHtml(e)).join("<br/>");
   } else {
-    box.hidden = true;
-    box.textContent = "";
+    box.hidden=true;
+    box.textContent="";
   }
 }
 
-function recalcDP() {
-  const rows = dpReadRows();
-  const { gpa, credits, count } = computeGPA(rows);
+function recalcDP(){
+  const rows = readDP();
+  const { gpa, credits, count } = compute(rows);
   $("dp-gpa").textContent = gpa === null ? "—" : fmt(gpa);
   $("dp-credits").textContent = fmt(credits);
   $("dp-count").textContent = String(count);
+  renderBreakdown("dp-breakdown", rows);
   validateDP();
 }
 
-$("dp-add").addEventListener("click", () => {
+$("dp-add").addEventListener("click", ()=>{ dpBody.appendChild(dpRow()); recalcDP(); });
+$("dp-reset").addEventListener("click", ()=>{
+  dpBody.innerHTML="";
   dpBody.appendChild(dpRow());
   recalcDP();
 });
-
-$("dp-reset").addEventListener("click", () => {
-  dpBody.innerHTML = "";
-  dpBody.appendChild(dpRow());
+$("dp-sample").addEventListener("click", ()=>{
+  dpBody.innerHTML="";
+  dpBody.appendChild(dpRow({subject:"Math HL", type:"IB HL", score:7, credit:6}));
+  dpBody.appendChild(dpRow({subject:"Physics HL", type:"IB HL", score:6, credit:6}));
+  dpBody.appendChild(dpRow({subject:"Chemistry HL", type:"IB HL", score:7, credit:6}));
+  dpBody.appendChild(dpRow({subject:"English SL", type:"IB SL", score:7, credit:4}));
+  dpBody.appendChild(dpRow({subject:"Chinese SL", type:"IB SL", score:7, credit:4}));
+  dpBody.appendChild(dpRow({subject:"Economics SL", type:"IB SL", score:6, credit:4}));
+  dpBody.appendChild(dpRow({subject:"TOK", type:"TOK", score:92.5, credit:0}));
   recalcDP();
 });
+$("dp-print").addEventListener("click", ()=>window.print());
 
-$("dp-sample").addEventListener("click", () => {
-  dpBody.innerHTML = "";
-  dpBody.appendChild(dpRow({ subject: "Math HL",      type: "IB HL", score: 7, credit: 6 }));
-  dpBody.appendChild(dpRow({ subject: "Physics HL",   type: "IB HL", score: 6, credit: 6 }));
-  dpBody.appendChild(dpRow({ subject: "Chemistry HL", type: "IB HL", score: 7, credit: 6 }));
-  dpBody.appendChild(dpRow({ subject: "English SL",   type: "IB SL", score: 7, credit: 4 }));
-  dpBody.appendChild(dpRow({ subject: "Chinese SL",   type: "IB SL", score: 7, credit: 4 }));
-  dpBody.appendChild(dpRow({ subject: "Economics SL", type: "IB SL", score: 6, credit: 4 }));
-  dpBody.appendChild(dpRow({ subject: "TOK",          type: "TOK",   score: 92.5, credit: 0 }));
-  recalcDP();
-});
-
-$("dp-print").addEventListener("click", () => window.print());
-
-// ===========================
-// Tabs wiring + init
-// ===========================
-$("tab-myp").addEventListener("click", () => setTab("tab-myp"));
-$("tab-dp").addEventListener("click", () => setTab("tab-dp"));
-$("tab-policy").addEventListener("click", () => setTab("tab-policy"));
-
-// Add status pill styling (DP) after DOM loads
+/* status pill CSS injection (small) */
 const style = document.createElement("style");
 style.textContent = `
-  .status{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700;font-size:13px;border:1px solid #e2e8f0}
-  .status-in{background:#eaf8ef;border-color:#bdeccf;color:#166534}
-  .status-ex{background:#f1f5f9;border-color:#e2e8f0;color:#334155}
+  .status-pill{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:800;font-size:13px;border:1px solid #e2e8f0}
+  .status-pill.in{background:#ecfdf5;border-color:#bdeccf;color:#166534}
+  .status-pill.ex{background:#f1f5f9;border-color:#e2e8f0;color:#334155}
 `;
 document.head.appendChild(style);
 
-// initial
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+
+/* init */
 (function init(){
+  mypBody.innerHTML="";
   mypBody.appendChild(mypRow());
+  dpBody.innerHTML="";
   dpBody.appendChild(dpRow());
   recalcMYP();
   recalcDP();
