@@ -7,62 +7,55 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="top">
-    <div class="top-inner">
+  <header class="header">
+    <div class="container header-inner">
       <div class="brand">
-        <!-- Logo: replace src later with your official file if you want -->
         <div class="logo" aria-hidden="true">
-          <!-- simple inline emblem placeholder -->
-          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-            <circle cx="22" cy="22" r="20" stroke="#1f4fd6" stroke-width="2" opacity="0.35"/>
-            <circle cx="22" cy="22" r="14" stroke="#1f4fd6" stroke-width="2" opacity="0.55"/>
-            <path d="M22 12 L26 22 L22 32 L18 22 Z" fill="#1f4fd6" opacity="0.25"/>
-            <path d="M16 18 C18 16, 26 16, 28 18" stroke="#1f4fd6" stroke-width="2" opacity="0.5"/>
-            <path d="M16 26 C18 28, 26 28, 28 26" stroke="#1f4fd6" stroke-width="2" opacity="0.5"/>
-          </svg>
+          <span>JCID</span>
         </div>
-
         <div class="brand-text">
           <h1>JCID GPA Calculator</h1>
           <p>Shanghai Jincai High School International Division</p>
         </div>
       </div>
 
-      <div class="pill-row">
-        <span class="pill pill-blue">Client-side only</span>
-        <span class="pill pill-green">GPA 2 decimals</span>
-        <span class="pill pill-amber">Raw rounding 92.5→93</span>
-        <span class="pill pill-gray">DP excludes TOK/CAS/EE</span>
+      <div class="badges">
+        <span class="badge badge-blue">Client-side only</span>
+        <span class="badge badge-green">GPA 2 decimals</span>
+        <span class="badge badge-amber">Raw rounding 92.5→93</span>
+        <span class="badge badge-gray">DP excludes TOK/CAS/EE</span>
       </div>
-    </div>
 
-    <div class="tabs">
-      <div class="tabs-inner" role="tablist" aria-label="Navigation">
+      <nav class="tabs" role="tablist" aria-label="Navigation">
         <button class="tab" role="tab" id="tab-myp" aria-selected="true" aria-controls="panel-myp">MYP GPA</button>
         <button class="tab" role="tab" id="tab-dp" aria-selected="false" aria-controls="panel-dp">DP GPA</button>
         <button class="tab" role="tab" id="tab-policy" aria-selected="false" aria-controls="panel-policy">Policy &amp; Scale</button>
-      </div>
+      </nav>
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="container main">
     <!-- MYP -->
     <section id="panel-myp" role="tabpanel" aria-labelledby="tab-myp">
       <div class="grid">
         <div class="card">
           <div class="card-head">
             <h2>MYP GPA Calculator</h2>
+            <p class="muted">
+              Enter raw scores (0–100). Raw scores are rounded first (0.5 rounds up).
+              MYP GPA maximum is <b>4.00</b>.
+            </p>
           </div>
 
           <div class="table-wrap">
-            <table class="table" id="myp-table" aria-label="MYP GPA table">
+            <table class="table" id="myp-table">
               <thead>
                 <tr>
                   <th>Subject</th>
-                  <th>Raw Score<br/>(0-100)</th>
-                  <th>Local Grade<br/>(1-8)</th>
+                  <th>Raw Score (0–100)</th>
+                  <th>Local Grade (1–8)</th>
                   <th>Credit</th>
-                  <th>Grade<br/>Point</th>
+                  <th>Grade Point</th>
                   <th>Contribution</th>
                   <th></th>
                 </tr>
@@ -71,31 +64,43 @@
             </table>
           </div>
 
-          <div class="btn-row">
+          <div class="actions">
             <button class="btn btn-primary" id="myp-add">+ Add Subject</button>
-            <button class="btn btn-light" id="myp-reset">Reset</button>
+            <button class="btn" id="myp-reset">Reset</button>
             <button class="btn btn-dark" id="myp-print">Print / Save PDF</button>
           </div>
 
           <div class="alert" id="myp-alert" hidden></div>
         </div>
 
-        <aside class="card card-side">
+        <aside class="card results">
           <div class="card-head">
             <h3>Results</h3>
-            <div class="muted small">MYP GPA (max 4.00)</div>
           </div>
-          <div class="side-body">
-            <div class="big" id="myp-gpa">—</div>
-            <div class="underline"></div>
 
-            <div class="kv">
-              <div class="k">Total Credits:</div>
-              <div class="v" id="myp-credits">0.0</div>
+          <div class="results-body">
+            <div class="kpi">
+              <div class="kpi-label">MYP GPA (max 4.00)</div>
+              <div class="kpi-value" id="myp-gpa">—</div>
+              <div class="kpi-bar"></div>
             </div>
-            <div class="kv">
-              <div class="k">Courses Included:</div>
-              <div class="v" id="myp-count">0</div>
+
+            <div class="metrics">
+              <div class="metric">
+                <div class="metric-k">Total Credits</div>
+                <div class="metric-v" id="myp-credits">0.0</div>
+              </div>
+              <div class="metric">
+                <div class="metric-k">Courses Included</div>
+                <div class="metric-v" id="myp-count">0</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="breakdown">
+              <div class="breakdown-title">Breakdown</div>
+              <div id="myp-breakdown" class="muted small">Add subjects to see contributions.</div>
             </div>
           </div>
         </aside>
@@ -108,17 +113,21 @@
         <div class="card">
           <div class="card-head">
             <h2>DP GPA Calculator</h2>
+            <p class="muted">
+              DP GPA is credit-weighted. <b>TOK / CAS / EE</b> are shown but automatically excluded from GPA.
+              HL/SL mapping is determined by course type (not by credits).
+            </p>
           </div>
 
           <div class="table-wrap">
-            <table class="table" id="dp-table" aria-label="DP GPA table">
+            <table class="table" id="dp-table">
               <thead>
                 <tr>
                   <th>Subject</th>
-                  <th>Course<br/>Type</th>
+                  <th>Course Type</th>
                   <th>Score</th>
                   <th>Credit</th>
-                  <th>Grade<br/>Point</th>
+                  <th>Grade Point</th>
                   <th>Status</th>
                   <th>Contribution</th>
                   <th></th>
@@ -128,118 +137,118 @@
             </table>
           </div>
 
-          <div class="btn-row">
+          <div class="actions">
             <button class="btn btn-primary" id="dp-add">+ Add Subject</button>
-            <button class="btn btn-green" id="dp-sample">⬇ Load DP Sample</button>
-            <button class="btn btn-light" id="dp-reset">Reset</button>
+            <button class="btn btn-green" id="dp-sample">Load DP Sample</button>
+            <button class="btn" id="dp-reset">Reset</button>
             <button class="btn btn-dark" id="dp-print">Print / Save PDF</button>
           </div>
 
           <div class="alert" id="dp-alert" hidden></div>
         </div>
 
-        <aside class="card card-side">
+        <aside class="card results">
           <div class="card-head">
             <h3>Results</h3>
-            <div class="muted small">DP GPA</div>
           </div>
-          <div class="side-body">
-            <div class="big" id="dp-gpa">—</div>
-            <div class="underline"></div>
 
-            <div class="kv">
-              <div class="k">Total Credits:</div>
-              <div class="v" id="dp-credits">0.0</div>
+          <div class="results-body">
+            <div class="kpi">
+              <div class="kpi-label">DP GPA</div>
+              <div class="kpi-value" id="dp-gpa">—</div>
+              <div class="kpi-bar"></div>
             </div>
-            <div class="kv">
-              <div class="k">Courses Included:</div>
-              <div class="v" id="dp-count">0</div>
+
+            <div class="metrics">
+              <div class="metric">
+                <div class="metric-k">Total Credits</div>
+                <div class="metric-v" id="dp-credits">0.0</div>
+              </div>
+              <div class="metric">
+                <div class="metric-k">Courses Included</div>
+                <div class="metric-v" id="dp-count">0</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="breakdown">
+              <div class="breakdown-title">Breakdown</div>
+              <div id="dp-breakdown" class="muted small">Add subjects to see contributions.</div>
             </div>
           </div>
         </aside>
       </div>
 
-      <div class="footer-info">
-        <div class="info-col">
+      <div class="footer-panels">
+        <div class="panel">
           <h4>About This Calculator</h4>
           <p>
             This tool provides GPA estimates based on JCID's official conversion scales and rounding rules.
             For authoritative GPA records, refer to your official transcript.
           </p>
         </div>
-        <div class="info-col">
+        <div class="panel">
           <h4>Privacy &amp; Performance</h4>
           <p>All calculations are performed locally in your browser. No data is stored, transmitted, or tracked.</p>
         </div>
       </div>
-
-      <div class="copyright">
-        © Shanghai Jincai High School International Division | GPA Calculator v1.0
-      </div>
+      <div class="footer-line">© Shanghai Jincai High School International Division | GPA Calculator v1.1</div>
     </section>
 
-    <!-- Policy -->
+    <!-- POLICY -->
     <section id="panel-policy" role="tabpanel" aria-labelledby="tab-policy" hidden>
       <div class="card">
         <div class="card-head">
           <h2>Policy &amp; Scale</h2>
+          <p class="muted">Transparent conversion tables and rules used by this calculator.</p>
         </div>
 
-        <div class="policy-body">
+        <div class="policy">
           <h3>GPA Formula</h3>
           <div class="callout callout-blue">
             <div class="mono">GPA = Σ(Grade Point × Credit) / Σ(Credit)</div>
-            <div class="muted small">The GPA is calculated as a credit-weighted average and displayed to 2 decimal places.</div>
+            <div class="muted small">Displayed to 2 decimal places.</div>
           </div>
 
           <h3>Raw Score Rounding Rule</h3>
           <div class="callout callout-amber">
-            <div>Raw scores are rounded to the <b>nearest integer</b> with <b>.5 rounding up</b> BEFORE conversion to grade points.</div>
-            <div class="muted small">Example: 92.5 → 93 → 4.00 grade points (falls in 93–100 band)</div>
+            Raw scores are rounded to the <b>nearest integer</b> with <b>.5 rounding up</b> before conversion.
+            <div class="muted small">Example: 92.5 → 93 → 4.00 (93–100 band)</div>
           </div>
 
           <h3>DP Exclusions</h3>
           <div class="callout callout-gray">
-            <div>The following course types are <b>excluded</b> from DP GPA calculation:</div>
-            <ul>
-              <li>TOK (Theory of Knowledge)</li>
-              <li>CAS (Creativity, Activity, Service)</li>
-              <li>EE (Extended Essay)</li>
-            </ul>
-            <div class="muted small">These courses can be displayed in your table but do not count in the GPA denominator or numerator.</div>
+            <b>Excluded from DP GPA:</b> TOK, CAS, EE. They can be displayed but do not count in numerator/denominator.
           </div>
 
           <h3>Conversion Tables</h3>
           <div class="tables">
             <div class="mini-card">
-              <h4>IB HL (Higher Level)</h4>
+              <h4>IB HL</h4>
               <table class="mini">
-                <thead><tr><th>IB Score</th><th>Grade Point</th></tr></thead>
-                <tbody>
-                  <tr><td>7</td><td>4.50</td></tr>
-                  <tr><td>6</td><td>4.10</td></tr>
-                  <tr><td>5</td><td>3.70</td></tr>
-                  <tr><td>4</td><td>3.30</td></tr>
-                  <tr><td>3</td><td>2.80</td></tr>
-                  <tr><td>2</td><td>2.40</td></tr>
-                  <tr><td>1</td><td>0.00</td></tr>
-                </tbody>
+                <tr><th>Score</th><th>GP</th></tr>
+                <tr><td>7</td><td>4.50</td></tr>
+                <tr><td>6</td><td>4.10</td></tr>
+                <tr><td>5</td><td>3.70</td></tr>
+                <tr><td>4</td><td>3.30</td></tr>
+                <tr><td>3</td><td>2.80</td></tr>
+                <tr><td>2</td><td>2.40</td></tr>
+                <tr><td>1</td><td>0.00</td></tr>
               </table>
             </div>
 
             <div class="mini-card">
-              <h4>IB SL (Standard Level)</h4>
+              <h4>IB SL</h4>
               <table class="mini">
-                <thead><tr><th>IB Score</th><th>Grade Point</th></tr></thead>
-                <tbody>
-                  <tr><td>7</td><td>4.30</td></tr>
-                  <tr><td>6</td><td>3.90</td></tr>
-                  <tr><td>5</td><td>3.50</td></tr>
-                  <tr><td>4</td><td>3.10</td></tr>
-                  <tr><td>3</td><td>2.60</td></tr>
-                  <tr><td>2</td><td>2.10</td></tr>
-                  <tr><td>1</td><td>0.00</td></tr>
-                </tbody>
+                <tr><th>Score</th><th>GP</th></tr>
+                <tr><td>7</td><td>4.30</td></tr>
+                <tr><td>6</td><td>3.90</td></tr>
+                <tr><td>5</td><td>3.50</td></tr>
+                <tr><td>4</td><td>3.10</td></tr>
+                <tr><td>3</td><td>2.60</td></tr>
+                <tr><td>2</td><td>2.10</td></tr>
+                <tr><td>1</td><td>0.00</td></tr>
               </table>
             </div>
           </div>
@@ -247,26 +256,23 @@
           <div class="mini-card wide">
             <h4>Non-IB Raw Score Bands (MYP &amp; DP Non-IB)</h4>
             <table class="mini">
-              <thead><tr><th>Raw Score Range</th><th>Grade Point</th></tr></thead>
-              <tbody>
-                <tr><td>93–100</td><td>4.00</td></tr>
-                <tr><td>85–92</td><td>3.50</td></tr>
-                <tr><td>78–84</td><td>3.20</td></tr>
-                <tr><td>70–77</td><td>2.90</td></tr>
-                <tr><td>60–69</td><td>2.40</td></tr>
-                <tr><td>45–59</td><td>1.80</td></tr>
-                <tr><td>0–44</td><td>0.00</td></tr>
-              </tbody>
+              <tr><th>Range</th><th>GP</th></tr>
+              <tr><td>93–100</td><td>4.00</td></tr>
+              <tr><td>85–92</td><td>3.50</td></tr>
+              <tr><td>78–84</td><td>3.20</td></tr>
+              <tr><td>70–77</td><td>2.90</td></tr>
+              <tr><td>60–69</td><td>2.40</td></tr>
+              <tr><td>45–59</td><td>1.80</td></tr>
+              <tr><td>0–44</td><td>0.00</td></tr>
             </table>
-            <div class="muted small">Note: Raw scores are rounded to the nearest integer before applying these bands. MYP max GPA is 4.00.</div>
+            <div class="muted small">Raw scores are rounded before banding. MYP max GPA is 4.00.</div>
           </div>
 
           <h3>Important Disclaimer</h3>
           <div class="disclaimer">
-            <b>This calculator is provided for reference only.</b> While it follows JCID's published conversion scales and rounding rules,
-            students should verify all GPA calculations with their official academic transcript. In case of any discrepancy, the official transcript prevails.
+            <b>For reference only.</b> Verify results with your official transcript. The official transcript prevails.
             <br/><br/>
-            This tool does not store any data and all calculations are performed locally in your browser.
+            This tool stores no data and runs entirely in your browser.
           </div>
         </div>
       </div>
